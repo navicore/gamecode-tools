@@ -437,8 +437,13 @@ impl Tool for FileGrep {
 mod tests {
     use super::*;
     use log::debug;
+    use std::sync::Mutex;
     use tokio::fs::File;
     use tokio::io::AsyncWriteExt;
+    
+    // Global mutex to ensure only one test uses the temp directory at a time
+    // This prevents race conditions during test execution
+    static TEMP_DIR_MUTEX: Mutex<()> = Mutex::new(());
 
     /// Helper function to get a temporary test directory
     fn get_test_dir() -> PathBuf {
@@ -578,22 +583,35 @@ mod tests {
 
     #[tokio::test]
     async fn test_grep_regex() -> Result<()> {
+        // Acquire the mutex to ensure this test has exclusive access to the temp directory
+        let _lock = TEMP_DIR_MUTEX.lock().expect("Failed to acquire mutex for test");
+        
         // Create a custom test directory with specific content for this test
         let test_dir = get_test_dir();
+        debug!("Using test directory: {}", test_dir.display());
 
-        // Clean up any existing test directory
+        // Make sure we start with a clean directory
         if test_dir.exists() {
-            let _ = std::fs::remove_dir_all(&test_dir);
+            std::fs::remove_dir_all(&test_dir).map_err(|e| {
+                Error::Other(format!("Failed to remove existing test directory: {}", e))
+            })?;
         }
 
-        // Create directories
-        fs::create_dir_all(&test_dir).await?;
+        // Create directories - explicitly check the result
+        fs::create_dir_all(&test_dir).await.map_err(|e| {
+            Error::Other(format!("Failed to create test directory: {}", e))
+        })?;
 
         // Create a file with specific content for regex testing - ensure it has "find" for our test
         let test_file_path = test_dir.join("regex_test_file.txt");
         let test_content = "This file contains the word find that will match our regex.";
 
-        create_test_file(&test_file_path, test_content).await?;
+        create_test_file(&test_file_path, test_content).await.map_err(|e| {
+            Error::Other(format!("Failed to create test file: {}", e))
+        })?;
+        
+        // Give the filesystem time to sync
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Verify the file was created successfully
         assert!(test_file_path.exists(), "Test file was not created");
@@ -666,15 +684,55 @@ mod tests {
             }
         }
 
-        // Cleanup
-        cleanup(&test_dir).await;
+        // Cleanup - with proper error handling
+        if test_dir.exists() {
+            fs::remove_dir_all(&test_dir).await.map_err(|e| {
+                debug!("Non-fatal error during cleanup: {}", e);
+                Error::Other(format!("Failed to clean up test directory: {}", e))
+            })?;
+        }
 
         Ok(())
     }
 
     #[tokio::test]
     async fn test_grep_with_include() -> Result<()> {
-        let test_dir = setup_test_directory().await?;
+        // Create a custom test directory with specific content for this test
+        let test_dir = get_test_dir();
+
+        // Clean up any existing test directory
+        if test_dir.exists() {
+            let _ = std::fs::remove_dir_all(&test_dir);
+        }
+
+        // Create directories
+        fs::create_dir_all(&test_dir).await?;
+
+        // Create files with different extensions - 2 txt files with "find" and 1 log file with "find"
+        let txt_files_with_find = [
+            ("file1.txt", "This is a text file with find in it."),
+            ("file2.txt", "Another text file with find."),
+        ];
+
+        let log_file_with_find = ("file3.log", "This log file also has find.");
+
+        // Create all the files
+        for (name, content) in &txt_files_with_find {
+            create_test_file(&test_dir.join(name), content).await?;
+        }
+        create_test_file(&test_dir.join(log_file_with_find.0), log_file_with_find.1).await?;
+
+        // Verify files exist
+        for (name, _) in &txt_files_with_find {
+            let path = test_dir.join(name);
+            assert!(path.exists(), "Test file {} wasn't created", name);
+        }
+        assert!(
+            test_dir.join(log_file_with_find.0).exists(),
+            "Log file {} wasn't created",
+            log_file_with_find.0
+        );
+
         let tool = FileGrep;
 
         // Grep for "find" but only in .txt files
@@ -697,8 +755,33 @@ mod tests {
 
         let result = tool.execute(params).await?;
 
-        assert_eq!(result.files.len(), 2); // Only 2 .txt files contain "find"
+        // Debug output to help troubleshoot across platforms
+        debug!("Files matched: {}", result.files.len());
+        for file in &result.files {
+            debug!("Matched file: {}", file.path);
+        }
+
+        // Check that all our txt files with "find" are matched
+        assert_eq!(result.files.len(), txt_files_with_find.len());
+
+        // All files should end with .txt
         assert!(result.files.iter().all(|f| f.path.ends_with(".txt")));
+
+        // All matched files should be one of our txt test files with "find"
+        for file in &result.files {
+            let file_name = Path::new(&file.path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("");
+
+            assert!(
+                txt_files_with_find
+                    .iter()
+                    .any(|(name, _)| file_name == *name),
+                "Unexpected file matched: {}",
+                file_name
+            );
+        }
 
         // Cleanup
         cleanup(&test_dir).await;
@@ -798,16 +881,24 @@ mod tests {
 
     #[tokio::test]
     async fn test_grep_files_only() -> Result<()> {
+        // Acquire the mutex to ensure this test has exclusive access to the temp directory
+        let _lock = TEMP_DIR_MUTEX.lock().expect("Failed to acquire mutex for test");
+        
         // Create a custom test directory with specific content for this test
         let test_dir = get_test_dir();
+        debug!("Using test directory: {}", test_dir.display());
 
-        // Clean up any existing test directory
+        // Make sure we start with a clean directory
         if test_dir.exists() {
-            let _ = std::fs::remove_dir_all(&test_dir);
+            std::fs::remove_dir_all(&test_dir).map_err(|e| {
+                Error::Other(format!("Failed to remove existing test directory: {}", e))
+            })?;
         }
 
-        // Create directories
-        fs::create_dir_all(&test_dir).await?;
+        // Create directories - explicitly check the result
+        fs::create_dir_all(&test_dir).await.map_err(|e| {
+            Error::Other(format!("Failed to create test directory: {}", e))
+        })?;
 
         // Create exactly 3 files with "find" and 1 without
         let files_with_find = [
@@ -818,11 +909,19 @@ mod tests {
 
         let file_without_find = ("file4.txt", "This file has no matches.");
 
-        // Create all the files
+        // Create all the files with error handling
         for (name, content) in &files_with_find {
-            create_test_file(&test_dir.join(name), content).await?;
+            create_test_file(&test_dir.join(name), content).await.map_err(|e| {
+                Error::Other(format!("Failed to create test file {}: {}", name, e))
+            })?;
         }
-        create_test_file(&test_dir.join(file_without_find.0), file_without_find.1).await?;
+        
+        create_test_file(&test_dir.join(file_without_find.0), file_without_find.1).await.map_err(|e| {
+            Error::Other(format!("Failed to create test file {}: {}", file_without_find.0, e))
+        })?;
+        
+        // Give the filesystem time to sync
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Verify files exist
         for (name, _) in &files_with_find {
@@ -878,8 +977,13 @@ mod tests {
             );
         }
 
-        // Cleanup
-        cleanup(&test_dir).await;
+        // Cleanup - with proper error handling
+        if test_dir.exists() {
+            fs::remove_dir_all(&test_dir).await.map_err(|e| {
+                debug!("Non-fatal error during cleanup: {}", e);
+                Error::Other(format!("Failed to clean up test directory: {}", e))
+            })?;
+        }
 
         Ok(())
     }
