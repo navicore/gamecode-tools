@@ -10,6 +10,7 @@ use std::sync::Arc;
 pub mod tools;
 pub mod jsonrpc;
 pub mod transform;
+pub mod logging;
 
 // Re-export key types
 pub use transform::{FormatConfig, FormatTransformer, InputFormat, OutputFormat};

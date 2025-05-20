@@ -10,6 +10,7 @@ use glob::Pattern;
 use regex::Regex;
 
 use crate::{Error, Result};
+use crate::logging::{debug, trace, info, warn, error};
 use super::Tool;
 
 /// File grep tool
@@ -657,8 +658,8 @@ mod tests {
         // Verify the file exists and read back content to confirm
         let content = fs::read_to_string(&test_file).await?;
         assert!(!content.is_empty(), "Test file is empty");
-        println!("Created test file at: {}", test_file.display());
-        println!("Content: {}", content);
+        debug!("Created test file at: {}", test_file.display());
+        debug!("Content: {}", content);
         
         // Grep for "find" with context
         let params = Params {
@@ -681,9 +682,9 @@ mod tests {
         let result = tool.execute(params).await?;
         
         // Debug
-        println!("Found {} files with matches", result.files.len());
+        debug!("Found {} files with matches", result.files.len());
         for file in &result.files {
-            println!("File: {} has {} matches", file.path, file.matches.len());
+            debug!("File: {} has {} matches", file.path, file.matches.len());
         }
         
         // Find our test file among the results

@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::{Error, Result};
+use crate::logging::{debug, trace, info, warn, error};
 use super::Tool;
 
 /// Shell command execution tool
