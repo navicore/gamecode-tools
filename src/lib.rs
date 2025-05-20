@@ -166,5 +166,23 @@ pub fn create_dispatcher_with_transformer(transformer: transform::FormatTransfor
         },
     );
     
+    // Register file_diff tool
+    let file_diff_tool = tools::file_diff::FileDiff;
+    dispatcher.register(
+        "file_diff",
+        move |params: tools::file_diff::Params| async move {
+            file_diff_tool.execute(params).await
+        },
+    );
+    
+    // Register shell tool
+    let shell_tool = tools::shell::Shell;
+    dispatcher.register(
+        "shell",
+        move |params: tools::shell::Params| async move {
+            shell_tool.execute(params).await
+        },
+    );
+    
     dispatcher
 }

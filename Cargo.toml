@@ -10,7 +10,7 @@ keywords = ["jsonrpc", "mcp", "tools"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
-tokio = { version = "1.28", features = ["rt", "rt-multi-thread", "fs", "process", "macros", "io-util"] }
+tokio = { version = "1.28", features = ["rt", "rt-multi-thread", "fs", "process", "macros", "io-util", "time"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 async-trait = "0.1"
@@ -18,9 +18,11 @@ log = "0.4"
 chrono = "0.4"
 base64 = "0.21"
 diff = "0.1.13"
+similar = "2.2.1"
 regex = "1.11.1"
 glob = "0.3.2"
 walkdir = "2.4.0"
+rand = "0.8.5"
 
 [dev-dependencies]
 tokio-test = "0.4"

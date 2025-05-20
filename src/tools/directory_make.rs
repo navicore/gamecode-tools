@@ -243,14 +243,25 @@ mod tests {
     
     #[tokio::test]
     async fn test_directory_make_existing() -> Result<()> {
-        let test_dir = get_test_dir();
+        // Create a unique test directory with timestamp
+        let timestamp = chrono::Utc::now().timestamp_millis();
+        let test_dir = std::env::temp_dir().join(format!("mkdir_exist_test_{}", timestamp));
         let tool = DirectoryMake;
         
-        // Clean up any existing test directory
-        cleanup(&test_dir).await;
+        // Clean up any existing directory
+        if test_dir.exists() {
+            std::fs::remove_dir_all(&test_dir)?;
+        }
         
         // Create the directory first
         fs::create_dir_all(&test_dir).await?;
+        
+        // Verify the directory exists
+        assert!(test_dir.exists(), "Test directory not created");
+        assert!(test_dir.is_dir(), "Test path is not a directory");
+        
+        // Wait for filesystem operations to complete
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         
         // Try to create it again with exist_ok=false
         let params = Params {
@@ -262,7 +273,7 @@ mod tests {
         let result = tool.execute(params).await;
         
         // Should fail because directory already exists
-        assert!(result.is_err());
+        assert!(result.is_err(), "Creating an existing directory should fail with exist_ok=false");
         
         // Try to create it again with exist_ok=true
         let params = Params {
@@ -276,8 +287,10 @@ mod tests {
         assert_eq!(result.path, test_dir.to_string_lossy().to_string());
         assert!(!result.created); // It wasn't newly created
         
-        // Clean up
-        cleanup(&test_dir).await;
+        // Clean up directly without relying on the common cleanup function
+        if test_dir.exists() {
+            std::fs::remove_dir_all(&test_dir).ok();
+        }
         
         Ok(())
     }

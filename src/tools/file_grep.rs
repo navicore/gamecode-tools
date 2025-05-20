@@ -636,26 +636,29 @@ mod tests {
     
     #[tokio::test]
     async fn test_grep_with_context() -> Result<()> {
-        let test_dir = setup_test_directory().await?;
+        // Create a unique temp directory for this test
+        let timestamp = chrono::Utc::now().timestamp_millis();
+        let test_dir = std::env::temp_dir().join(format!("grep_context_test_{}", timestamp));
+        
+        // Create the test directory
+        fs::create_dir_all(&test_dir).await?;
+        
         let tool = FileGrep;
         
         // Create a custom file with multi-line content for testing context
         let test_file = test_dir.join("context_test.txt");
         
+        // Create the test file with content
         create_test_file(
             &test_file,
             "Line 1\nLine 2\nHere is find in line 3\nLine 4\nLine 5\nAnother find here in line 6\nLine 7\n"
         ).await?;
         
-        // Wait for filesystem to complete write
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
-        // Verify the file exists
-        assert!(test_file.exists(), "Test file doesn't exist");
-        
-        // Read back the file to verify content was written correctly
+        // Verify the file exists and read back content to confirm
         let content = fs::read_to_string(&test_file).await?;
-        println!("File content: {}", content);
+        assert!(!content.is_empty(), "Test file is empty");
+        println!("Created test file at: {}", test_file.display());
+        println!("Content: {}", content);
         
         // Grep for "find" with context
         let params = Params {
@@ -699,8 +702,10 @@ mod tests {
         assert!(!context_file.matches[0].after_context.is_empty(), "First match should have after context");
         assert!(!context_file.matches[1].after_context.is_empty(), "Second match should have after context");
         
-        // Cleanup
-        cleanup(&test_dir).await;
+        // Manual cleanup since we created our own directory
+        if test_dir.exists() {
+            let _ = fs::remove_dir_all(&test_dir).await;
+        }
         
         Ok(())
     }

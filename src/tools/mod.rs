@@ -29,3 +29,5 @@ pub mod file_patch;
 pub mod file_move;
 pub mod file_find;
 pub mod file_grep;
+pub mod file_diff;
+pub mod shell;
