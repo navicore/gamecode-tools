@@ -103,5 +103,23 @@ pub fn create_dispatcher_with_transformer(transformer: transform::FormatTransfor
         },
     );
     
+    // Register file_read tool
+    let file_read_tool = tools::file_read::FileRead;
+    dispatcher.register(
+        "file_read",
+        move |params: tools::file_read::Params| async move {
+            file_read_tool.execute(params).await
+        },
+    );
+    
+    // Register file_write tool
+    let file_write_tool = tools::file_write::FileWrite;
+    dispatcher.register(
+        "file_write",
+        move |params: tools::file_write::Params| async move {
+            file_write_tool.execute(params).await
+        },
+    );
+    
     dispatcher
 }
