@@ -9,10 +9,20 @@ A Rust library providing JSONRPC-compatible tool functions for MCP (Model Contex
 - Tools for filesystem operations and search
 - Flexible format transformers for different API conventions (standard JSONRPC, AWS Bedrock, etc.)
 - macOS command line support
+- Proper logging with configurable log levels
 
 ## Currently Implemented Tools
 
 - `directory_list`: List directory contents with filtering options
+- `directory_make`: Create directories
+- `file_read`: Read file contents
+- `file_write`: Write content to files
+- `file_patch`: Apply patches to files
+- `file_move`: Move or rename files
+- `file_find`: Find files matching criteria
+- `file_grep`: Search file contents
+- `file_diff`: Compare files and generate diffs
+- `shell`: Execute commands with security considerations
 
 ## Installation
 
@@ -145,6 +155,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## License
 
 MIT
+
+## Logging
+
+The library uses the standard `log` crate for logging. This allows applications to choose their preferred logging implementation. 
+
+```rust
+use gamecode_tools::logging;
+use log::{debug, error, info, trace, warn, LevelFilter};
+
+// Using env_logger as an example
+fn main() {
+    // Initialize logging with env_logger
+    env_logger::Builder::from_default_env()
+        .filter_level(LevelFilter::Debug)
+        .init();
+        
+    // Now you can use log macros
+    info!("Application started");
+    
+    // Logs from the gamecode-tools will be visible based on your log level
+}
+```
+
+You can control log levels using environment variables when using env_logger:
+
+```bash
+# Show only info and above
+RUST_LOG=info cargo run
+
+# Show debug logs for the gamecode-tools crate only
+RUST_LOG=gamecode_tools=debug cargo run
+
+# Show all debug logs
+RUST_LOG=debug cargo run
+```
 
 ## Contributing
 

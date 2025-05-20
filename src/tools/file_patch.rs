@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use base64::{engine::general_purpose, Engine as _};
 
 use crate::{Error, Result};
+use crate::logging::{debug, trace, info, warn, error};
 use super::Tool;
 
 /// Patch type for the file patch tool
@@ -382,8 +383,8 @@ mod tests {
     #[ignore = "Failing in CI environment"]
     async fn test_file_patch_unified() -> Result<()> {
         let test_file = create_test_text_file().await?;
-        println!("Test file: {:?}", test_file);
-        println!("Test file exists: {}", test_file.exists());
+        debug!("Test file: {:?}", test_file);
+        debug!("Test file exists: {}", test_file.exists());
         
         // Just to be safe, ensure the file is flushed and visible
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -420,25 +421,25 @@ mod tests {
         let expected = "Line 1\nLine 2\nModified Line 3\nLine 4\nLine 5\nLine 6";
         assert_eq!(patched_content, expected);
         
-        // Print the result for debugging
-        println!("Patched file result: {:?}", result);
+        // Log the result for debugging
+        debug!("Patched file result: {:?}", result);
                 
         // Don't attempt to verify backup for now - just make the test pass
         // Clean up
-        println!("Removing test file: {:?}", test_file);
+        debug!("Removing test file: {:?}", test_file);
         if let Err(e) = fs::remove_file(&test_file).await {
-            println!("Error removing test file: {}", e);
+            warn!("Error removing test file: {}", e);
         } else {
-            println!("Test file removed successfully");
+            debug!("Test file removed successfully");
         }
         
         // Clean up backup if it exists
         if let Some(backup_path) = &result.backup_path {
-            println!("Removing backup file: {}", backup_path);
+            debug!("Removing backup file: {}", backup_path);
             if let Err(e) = fs::remove_file(backup_path).await {
-                println!("Error removing backup file: {}", e);
+                warn!("Error removing backup file: {}", e);
             } else {
-                println!("Backup file removed successfully");
+                debug!("Backup file removed successfully");
             }
         }
         

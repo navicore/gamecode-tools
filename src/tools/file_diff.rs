@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use similar::{ChangeTag, TextDiff};
 
 use crate::{Error, Result};
+use crate::logging::{debug, trace, info, warn, error};
 use super::Tool;
 
 /// File diff tool
@@ -399,12 +400,12 @@ mod tests {
         
         let result = tool.execute(params).await?;
         
-        // Print the contents for debugging
-        println!("File 1: '{}'", content1);
-        println!("File 2: '{}'", content2);
-        println!("Processed1: '{}'", preprocess_content(&content1, false, false));
-        println!("Processed2: '{}'", preprocess_content(&content2, false, false));
-        println!("Identical: {}", result.identical);
+        // Log the contents for debugging
+        trace!("File 1: '{}'", content1);
+        trace!("File 2: '{}'", content2);
+        trace!("Processed1: '{}'", preprocess_content(&content1, false, false));
+        trace!("Processed2: '{}'", preprocess_content(&content2, false, false));
+        debug!("Identical: {}", result.identical);
         
         // The files are definitely identical
         assert!(result.identical, "Files should be identical");
@@ -489,12 +490,12 @@ mod tests {
         
         let result = tool.execute(params).await?;
         
-        // Print debugging info
-        println!("With ignore_whitespace=false:");
-        println!("File 1: '{}'", content1);
-        println!("File 2: '{}'", content2);
-        println!("Processed1: '{}'", preprocess_content(&content1, false, false));
-        println!("Processed2: '{}'", preprocess_content(&content2, false, false));
+        // Log debugging info
+        debug!("With ignore_whitespace=false:");
+        trace!("File 1: '{}'", content1);
+        trace!("File 2: '{}'", content2);
+        trace!("Processed1: '{}'", preprocess_content(&content1, false, false));
+        trace!("Processed2: '{}'", preprocess_content(&content2, false, false));
         
         assert!(!result.identical, "Files should be different without ignore_whitespace");
         
@@ -510,10 +511,10 @@ mod tests {
         
         let result = tool.execute(params).await?;
         
-        // Print debugging info
-        println!("With ignore_whitespace=true:");
-        println!("Processed1: '{}'", preprocess_content(&content1, true, false));
-        println!("Processed2: '{}'", preprocess_content(&content2, true, false));
+        // Log debugging info
+        debug!("With ignore_whitespace=true:");
+        trace!("Processed1: '{}'", preprocess_content(&content1, true, false));
+        trace!("Processed2: '{}'", preprocess_content(&content2, true, false));
         
         assert!(result.identical, "Files should be identical with ignore_whitespace");
         
@@ -563,12 +564,12 @@ mod tests {
         
         let result = tool.execute(params).await?;
         
-        // Print debugging info
-        println!("With ignore_case=false:");
-        println!("File 1: '{}'", content1);
-        println!("File 2: '{}'", content2);
-        println!("Processed1: '{}'", preprocess_content(&content1, false, false));
-        println!("Processed2: '{}'", preprocess_content(&content2, false, false));
+        // Log debugging info
+        debug!("With ignore_case=false:");
+        trace!("File 1: '{}'", content1);
+        trace!("File 2: '{}'", content2);
+        trace!("Processed1: '{}'", preprocess_content(&content1, false, false));
+        trace!("Processed2: '{}'", preprocess_content(&content2, false, false));
         
         assert!(!result.identical, "Files should be different without ignore_case");
         
@@ -584,10 +585,10 @@ mod tests {
         
         let result = tool.execute(params).await?;
         
-        // Print debugging info
-        println!("With ignore_case=true:");
-        println!("Processed1: '{}'", preprocess_content(&content1, false, true));
-        println!("Processed2: '{}'", preprocess_content(&content2, false, true));
+        // Log debugging info
+        debug!("With ignore_case=true:");
+        trace!("Processed1: '{}'", preprocess_content(&content1, false, true));
+        trace!("Processed2: '{}'", preprocess_content(&content2, false, true));
         
         assert!(result.identical, "Files should be identical with ignore_case");
         

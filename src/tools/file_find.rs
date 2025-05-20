@@ -10,6 +10,7 @@ use glob::Pattern;
 use rand::random;
 
 use crate::{Error, Result};
+use crate::logging::{debug, trace, info, warn, error};
 use super::Tool;
 
 /// File type for filtering search results
@@ -564,7 +565,7 @@ mod tests {
         
         // Verify that all entries are directories
         for entry in &result.entries {
-            println!("Directory entry: {:?}, is_dir: {}", entry.path, entry.is_dir);
+            debug!("Directory entry: {:?}, is_dir: {}", entry.path, entry.is_dir);
             assert!(entry.is_dir, "Entry should be a directory: {}", entry.path);
         }
         
