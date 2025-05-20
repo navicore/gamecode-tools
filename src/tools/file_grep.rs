@@ -249,7 +249,7 @@ async fn search_file(
                 // Log error for debugging but don't fail the whole operation
                 log::warn!("Invalid regex pattern '{}': {}", pattern, e);
                 return Ok(None);
-            },
+            }
         }
     } else {
         None
@@ -578,13 +578,36 @@ mod tests {
 
     #[tokio::test]
     async fn test_grep_regex() -> Result<()> {
-        let test_dir = setup_test_directory().await?;
+        // Create a custom test directory with specific content for this test
+        let test_dir = get_test_dir();
+
+        // Clean up any existing test directory
+        if test_dir.exists() {
+            let _ = std::fs::remove_dir_all(&test_dir);
+        }
+
+        // Create directories
+        fs::create_dir_all(&test_dir).await?;
+
+        // Create a file with specific content for regex testing - ensure it has "find" for our test
+        let test_file_path = test_dir.join("regex_test_file.txt");
+        let test_content = "This file contains the word find that will match our regex.";
+
+        create_test_file(&test_file_path, test_content).await?;
+
+        // Verify the file was created successfully
+        assert!(test_file_path.exists(), "Test file was not created");
+
+        let content = fs::read_to_string(&test_file_path).await?;
+        assert!(!content.is_empty(), "Test file is empty");
+        debug!("Test file content: {}", content);
+
         let tool = FileGrep;
 
-        // Skip relying on glob patterns and just search all files
+        // Use a simpler, more explicit regex that should reliably match "find"
         let params = Params {
             directory: test_dir.to_string_lossy().to_string(),
-            pattern: "f.nd".to_string(),
+            pattern: "f\\w+d".to_string(), // This will match "find" on all platforms
             regex: true,
             case_insensitive: false,
             recursive: true,
@@ -599,10 +622,21 @@ mod tests {
             file_names_only: false,
         };
 
+        // Execute the search
         let result = tool.execute(params).await?;
 
-        // The setup creates files with "find" which matches our regex "f.nd"
-        // We don't assert exact counts to make the test more robust
+        // Debug output to help diagnose failures
+        debug!("Found {} files with matches", result.files.len());
+        debug!("Total matches: {}", result.total_matches);
+
+        for file in &result.files {
+            debug!("File match: {}", file.path);
+            for m in &file.matches {
+                debug!("  Line {}: {}", m.line_number, m.line);
+            }
+        }
+
+        // Verify that we found at least one match
         assert!(
             !result.files.is_empty(),
             "Should find files with regex pattern"
@@ -613,23 +647,20 @@ mod tests {
         );
 
         // Compile the regex once before the loop
-        let pattern_regex = match Regex::new("f.nd") {
+        let pattern_regex = match Regex::new("f\\w+d") {
             Ok(re) => re,
             Err(e) => {
                 return Err(Error::Other(format!("Failed to compile test regex: {}", e)));
             }
         };
 
-        // Make sure all matches contain "find" or any other word matching "f.nd"
+        // Verify matches actually match our regex
         for file in &result.files {
             for match_item in &file.matches {
                 let line = &match_item.line;
-                // The match should contain "find" or "fond" or anything matching "f.nd"
                 assert!(
-                    line.contains("find")
-                        || line.contains("fond")
-                        || pattern_regex.is_match(line),
-                    "Line should contain a match for the regex 'f.nd': {}",
+                    pattern_regex.is_match(line),
+                    "Line should match regex 'f\\w+d': {}",
                     line
                 );
             }

@@ -1,7 +1,7 @@
 //! Tools module with all tool implementations.
 
 use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::Result;
 

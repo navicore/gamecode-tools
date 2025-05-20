@@ -3,7 +3,7 @@
 //! This module provides a way to transform JSONRPC parameters and results
 //! to and from different API-specific formats.
 
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::Result;
 
@@ -51,7 +51,7 @@ impl FormatConfig {
             output_format,
         }
     }
-    
+
     /// Create a standard format configuration
     pub fn standard() -> Self {
         Self {
@@ -59,7 +59,7 @@ impl FormatConfig {
             output_format: OutputFormat::Standard,
         }
     }
-    
+
     /// Create a Bedrock format configuration
     pub fn bedrock() -> Self {
         Self {
@@ -67,7 +67,7 @@ impl FormatConfig {
             output_format: OutputFormat::Bedrock,
         }
     }
-    
+
     /// Create a configuration that accepts standard input but produces Bedrock output
     pub fn standard_to_bedrock() -> Self {
         Self {
@@ -75,7 +75,7 @@ impl FormatConfig {
             output_format: OutputFormat::Bedrock,
         }
     }
-    
+
     /// Create a configuration that accepts Bedrock input but produces standard output
     pub fn bedrock_to_standard() -> Self {
         Self {
@@ -97,22 +97,22 @@ impl FormatTransformer {
     pub fn new(config: FormatConfig) -> Self {
         Self { config }
     }
-    
+
     /// Create a standard format transformer
     pub fn standard() -> Self {
         Self::new(FormatConfig::standard())
     }
-    
+
     /// Create a Bedrock format transformer
     pub fn bedrock() -> Self {
         Self::new(FormatConfig::bedrock())
     }
-    
+
     /// Get the current format configuration
     pub fn config(&self) -> FormatConfig {
         self.config
     }
-    
+
     /// Transform a JSON value to Bedrock format
     fn to_bedrock_format(&self, value: &serde_json::Value) -> serde_json::Value {
         match value {
@@ -123,14 +123,12 @@ impl FormatTransformer {
                     new_map.insert(k.clone(), self.to_bedrock_format(v));
                 }
                 serde_json::Value::Object(new_map)
-            },
+            }
             // For arrays, recursively transform all elements
             serde_json::Value::Array(arr) => {
-                let new_arr = arr.iter()
-                    .map(|v| self.to_bedrock_format(v))
-                    .collect();
+                let new_arr = arr.iter().map(|v| self.to_bedrock_format(v)).collect();
                 serde_json::Value::Array(new_arr)
-            },
+            }
             // For leaf values (string, number, bool, null), wrap in the Bedrock format
             _ => {
                 // Don't wrap if already wrapped
@@ -139,7 +137,7 @@ impl FormatTransformer {
                         return value.clone();
                     }
                 }
-                
+
                 serde_json::json!({
                     "type": "text",
                     "text": value
@@ -147,37 +145,37 @@ impl FormatTransformer {
             }
         }
     }
-    
+
     /// Extract a value from Bedrock format
     fn from_bedrock_format(&self, value: &serde_json::Value) -> serde_json::Value {
         match value {
             // Check if this is a wrapped value
             serde_json::Value::Object(map) => {
-                if let (Some(serde_json::Value::String(typ)), Some(content)) = (map.get("type"), map.get("text")) {
+                if let (Some(serde_json::Value::String(typ)), Some(content)) =
+                    (map.get("type"), map.get("text"))
+                {
                     if typ == "text" {
                         return self.from_bedrock_format(content);
                     }
                 }
-                
+
                 // Regular object, process recursively
                 let mut new_map = serde_json::Map::new();
                 for (k, v) in map {
                     new_map.insert(k.clone(), self.from_bedrock_format(v));
                 }
                 serde_json::Value::Object(new_map)
-            },
+            }
             // For arrays, recursively unwrap all elements
             serde_json::Value::Array(arr) => {
-                let new_arr = arr.iter()
-                    .map(|v| self.from_bedrock_format(v))
-                    .collect();
+                let new_arr = arr.iter().map(|v| self.from_bedrock_format(v)).collect();
                 serde_json::Value::Array(new_arr)
-            },
+            }
             // For other values, return as is
             _ => value.clone(),
         }
     }
-    
+
     /// Transform parameters based on the input format
     pub fn transform_params(&self, params: serde_json::Value) -> Result<serde_json::Value> {
         match self.config.input_format {
@@ -185,7 +183,7 @@ impl FormatTransformer {
             InputFormat::Bedrock => Ok(self.from_bedrock_format(&params)),
         }
     }
-    
+
     /// Transform result based on the output format
     pub fn transform_result(&self, result: serde_json::Value) -> Result<serde_json::Value> {
         match self.config.output_format {

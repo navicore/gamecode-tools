@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use crate::Error;
 use crate::Result;
-use crate::transform::{FormatTransformer, serialize, deserialize};
+use crate::transform::{FormatTransformer, deserialize, serialize};
 
 /// JSONRPC request structure
 #[derive(Debug, Deserialize, Serialize)]
@@ -135,7 +135,14 @@ pub fn invalid_request<T>(message: &str, id: serde_json::Value) -> Response<T> {
 }
 
 /// Tool handler function signature
-pub type HandlerFn = Box<dyn Fn(serde_json::Value) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value>> + Send>> + Send + Sync>;
+pub type HandlerFn = Box<
+    dyn Fn(
+            serde_json::Value,
+        )
+            -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value>> + Send>>
+        + Send
+        + Sync,
+>;
 
 /// JSONRPC request dispatcher
 pub struct Dispatcher {
@@ -156,7 +163,7 @@ impl Dispatcher {
     pub fn new() -> Self {
         Self::with_transformer(Arc::new(FormatTransformer::standard()))
     }
-    
+
     /// Create a new empty dispatcher with a custom transformer
     pub fn with_transformer(transformer: Arc<FormatTransformer>) -> Self {
         Self {
@@ -164,12 +171,12 @@ impl Dispatcher {
             transformer,
         }
     }
-    
+
     /// Get the current transformer
     pub fn transformer(&self) -> &FormatTransformer {
         &self.transformer
     }
-    
+
     /// Register a method handler
     pub fn register<F, Fut, P, O>(&mut self, method: &str, handler: F)
     where
@@ -180,51 +187,50 @@ impl Dispatcher {
     {
         let method_name = method.to_string();
         let transformer = self.transformer.clone();
-        
+
         let handler_fn: HandlerFn = Box::new(move |params: serde_json::Value| {
             let handler_clone = handler.clone();
             let transformer_clone = transformer.clone();
-            
+
             Box::pin(async move {
                 // Transform parameters using the transformer
                 let transformed_params = transformer_clone.transform_params(params)?;
-                
+
                 // Deserialize to the specific parameter type
                 let typed_params: P = deserialize(transformed_params)?;
-                
+
                 // Execute the handler
                 let result = handler_clone(typed_params).await?;
-                
+
                 // Serialize the result
                 let json_result = serialize(result)?;
-                
+
                 // Transform result using the transformer
                 transformer_clone.transform_result(json_result)
             })
         });
-        
+
         self.handlers.insert(method_name, handler_fn);
     }
-    
+
     /// Dispatch a JSONRPC request
     pub async fn dispatch(&self, request_str: &str) -> Result<String> {
         let raw_request: RawRequest = serde_json::from_str(request_str)?;
-        
+
         let response = if raw_request.jsonrpc != "2.0" {
-            let resp = invalid_request::<serde_json::Value>("Invalid JSONRPC version", raw_request.id);
+            let resp =
+                invalid_request::<serde_json::Value>("Invalid JSONRPC version", raw_request.id);
             serde_json::to_string(&resp)?
         } else {
             match self.handlers.get(&raw_request.method) {
-                Some(handler) => {
-                    match handler(raw_request.params.clone()).await {
-                        Ok(result) => {
-                            let resp = success(result, raw_request.id);
-                            serde_json::to_string(&resp)?
-                        },
-                        Err(e) => {
-                            let resp = error::<serde_json::Value>(e, raw_request.id);
-                            serde_json::to_string(&resp)?
-                        }
+                Some(handler) => match handler(raw_request.params.clone()).await {
+                    Ok(result) => {
+                        let resp = success(result, raw_request.id);
+                        serde_json::to_string(&resp)?
+                    }
+                    Err(e) => {
+                        let resp = error::<serde_json::Value>(e, raw_request.id);
+                        serde_json::to_string(&resp)?
                     }
                 },
                 None => {
@@ -233,7 +239,7 @@ impl Dispatcher {
                 }
             }
         };
-        
+
         Ok(response)
     }
 }
