@@ -798,7 +798,38 @@ mod tests {
 
     #[tokio::test]
     async fn test_grep_files_only() -> Result<()> {
-        let test_dir = setup_test_directory().await?;
+        // Create a custom test directory with specific content for this test
+        let test_dir = get_test_dir();
+
+        // Clean up any existing test directory
+        if test_dir.exists() {
+            let _ = std::fs::remove_dir_all(&test_dir);
+        }
+
+        // Create directories
+        fs::create_dir_all(&test_dir).await?;
+
+        // Create exactly 3 files with "find" and 1 without
+        let files_with_find = [
+            ("file1.txt", "This file contains the word find."),
+            ("file2.txt", "Another file with find in it."),
+            ("file3.txt", "Third file with find."),
+        ];
+
+        let file_without_find = ("file4.txt", "This file has no matches.");
+
+        // Create all the files
+        for (name, content) in &files_with_find {
+            create_test_file(&test_dir.join(name), content).await?;
+        }
+        create_test_file(&test_dir.join(file_without_find.0), file_without_find.1).await?;
+
+        // Verify files exist
+        for (name, _) in &files_with_find {
+            let path = test_dir.join(name);
+            assert!(path.exists(), "Test file {} wasn't created", name);
+        }
+
         let tool = FileGrep;
 
         // Grep for "find" but only report file names
@@ -821,8 +852,31 @@ mod tests {
 
         let result = tool.execute(params).await?;
 
-        assert_eq!(result.files.len(), 3); // 3 files contain "find"
-        assert!(result.files.iter().all(|f| f.matches.is_empty())); // No match details
+        // Debug output to help troubleshoot across platforms
+        debug!("Files matched: {}", result.files.len());
+        for file in &result.files {
+            debug!("Matched file: {}", file.path);
+        }
+
+        // Check for exactly the number of files we created with "find"
+        assert_eq!(result.files.len(), files_with_find.len());
+
+        // All result files should have empty matches array
+        assert!(result.files.iter().all(|f| f.matches.is_empty()));
+
+        // All matched files should be one of our test files with "find"
+        for file in &result.files {
+            let file_name = Path::new(&file.path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("");
+
+            assert!(
+                files_with_find.iter().any(|(name, _)| file_name == *name),
+                "Unexpected file matched: {}",
+                file_name
+            );
+        }
 
         // Cleanup
         cleanup(&test_dir).await;
