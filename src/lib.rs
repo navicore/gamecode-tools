@@ -11,6 +11,9 @@ pub mod tools;
 pub mod jsonrpc;
 pub mod transform;
 
+// Re-export key types
+pub use transform::{FormatConfig, FormatTransformer, InputFormat, OutputFormat};
+
 /// Custom error type for the library
 #[derive(Debug)]
 pub enum Error {
@@ -75,8 +78,18 @@ pub fn create_bedrock_dispatcher() -> jsonrpc::Dispatcher {
     create_dispatcher_with_transformer(transform::bedrock_transformer())
 }
 
+/// Factory function for a dispatcher that accepts standard input but produces Bedrock output
+pub fn create_standard_to_bedrock_dispatcher() -> jsonrpc::Dispatcher {
+    create_dispatcher_with_transformer(transform::standard_to_bedrock_transformer())
+}
+
+/// Factory function for a dispatcher that accepts Bedrock input but produces standard output
+pub fn create_bedrock_to_standard_dispatcher() -> jsonrpc::Dispatcher {
+    create_dispatcher_with_transformer(transform::bedrock_to_standard_transformer())
+}
+
 /// Factory function to create a dispatcher with a custom transformer
-pub fn create_dispatcher_with_transformer<T: transform::ResponseTransformer + 'static>(transformer: T) -> jsonrpc::Dispatcher {
+pub fn create_dispatcher_with_transformer(transformer: transform::FormatTransformer) -> jsonrpc::Dispatcher {
     use tools::Tool;
     
     let mut dispatcher = jsonrpc::Dispatcher::with_transformer(Arc::new(transformer));

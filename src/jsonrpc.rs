@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use crate::Error;
 use crate::Result;
-use crate::transform::{ResponseTransformer, standard_transformer, serialize, deserialize};
+use crate::transform::{FormatTransformer, serialize, deserialize};
 
 /// JSONRPC request structure
 #[derive(Debug, Deserialize, Serialize)]
@@ -141,8 +141,8 @@ pub type HandlerFn = Box<dyn Fn(serde_json::Value) -> std::pin::Pin<Box<dyn std:
 pub struct Dispatcher {
     /// Method handlers
     handlers: HashMap<String, HandlerFn>,
-    /// Response transformer
-    transformer: Arc<dyn ResponseTransformer>,
+    /// Format transformer
+    transformer: Arc<FormatTransformer>,
 }
 
 impl Default for Dispatcher {
@@ -154,15 +154,20 @@ impl Default for Dispatcher {
 impl Dispatcher {
     /// Create a new empty dispatcher with the standard transformer
     pub fn new() -> Self {
-        Self::with_transformer(Arc::new(standard_transformer()))
+        Self::with_transformer(Arc::new(FormatTransformer::standard()))
     }
     
     /// Create a new empty dispatcher with a custom transformer
-    pub fn with_transformer(transformer: Arc<dyn ResponseTransformer>) -> Self {
+    pub fn with_transformer(transformer: Arc<FormatTransformer>) -> Self {
         Self {
             handlers: HashMap::new(),
             transformer,
         }
+    }
+    
+    /// Get the current transformer
+    pub fn transformer(&self) -> &FormatTransformer {
+        &self.transformer
     }
     
     /// Register a method handler

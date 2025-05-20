@@ -17,16 +17,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "id": 1
     }"#;
     
-    // Bedrock-style wrapped request
+    // Bedrock-style wrapped request with fully wrapped parameters
     let bedrock_request = r#"{
         "jsonrpc": "2.0",
         "method": "directory_list",
         "params": {
             "type": "text",
             "text": {
-                "path": "src",
-                "include_hidden": false,
-                "pattern": "*.rs"
+                "path": {"type": "text", "text": "src"},
+                "include_hidden": {"type": "text", "text": false},
+                "pattern": {"type": "text", "text": "*.rs"}
             }
         },
         "id": 2

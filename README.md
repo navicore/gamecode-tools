@@ -7,7 +7,7 @@ A Rust library providing JSONRPC-compatible tool functions for MCP (Model Contex
 - Async tool implementations with JSONRPC-compatible inputs and outputs
 - Type-safe API using Rust's strong type system
 - Tools for filesystem operations and search
-- Format transformers for different API conventions (standard JSONRPC, AWS Bedrock, etc.)
+- Flexible format transformers for different API conventions (standard JSONRPC, AWS Bedrock, etc.)
 - macOS command line support
 
 ## Currently Implemented Tools
@@ -53,36 +53,63 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### Using Different API Format Transformers
+### Format Options
 
-The library supports transforming JSONRPC parameters and results to match different API formats:
+The library supports different input and output formats through explicit configuration:
 
 ```rust
-use gamecode_tools::create_bedrock_dispatcher;
+use gamecode_tools::{
+    // Ready-to-use dispatcher factories:
+    create_default_dispatcher,        // Standard format for both input and output
+    create_bedrock_dispatcher,        // AWS Bedrock format for both input and output
+    create_standard_to_bedrock_dispatcher,  // Standard input, Bedrock output
+    create_bedrock_to_standard_dispatcher,  // Bedrock input, Standard output
+    
+    // Or create custom configurations:
+    FormatConfig, FormatTransformer, InputFormat, OutputFormat,
+    create_dispatcher_with_transformer
+};
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a dispatcher with AWS Bedrock transformer
-    let dispatcher = create_bedrock_dispatcher();
-    
-    // This transforms the result to {"type": "text", "text": {...result...}}
-    // It also accepts params in either standard format or wrapped format
-    let request = r#"{
-        "jsonrpc": "2.0",
-        "method": "directory_list",
-        "params": {
-            "path": "src",
-            "include_hidden": false
-        },
-        "id": 1
-    }"#;
-    
-    let response = dispatcher.dispatch(request).await?;
-    println!("{}", response);
-    
-    Ok(())
-}
+// Create a custom format configuration
+let config = FormatConfig::new(InputFormat::Standard, OutputFormat::Bedrock);
+let transformer = FormatTransformer::new(config);
+let dispatcher = create_dispatcher_with_transformer(transformer);
+
+// Now all responses will be in Bedrock format, but it accepts standard input
 ```
+
+The library supports these format options:
+
+1. **Standard format**: Regular JSONRPC with direct values
+   ```json
+   {
+     "jsonrpc": "2.0",
+     "method": "directory_list",
+     "params": {
+       "path": "src",
+       "include_hidden": false
+     },
+     "id": 1
+   }
+   ```
+
+2. **AWS Bedrock format**: All values are recursively wrapped in `{"type": "text", "text": value}`
+   ```json
+   {
+     "jsonrpc": "2.0",
+     "method": "directory_list",
+     "params": {
+       "type": "text",
+       "text": {
+         "path": {"type": "text", "text": "src"},
+         "include_hidden": {"type": "text", "text": false}
+       }
+     },
+     "id": 1
+   }
+   ```
+
+These formats can be applied independently to inputs and outputs, giving you full control over how your JSONRPC interface behaves.
 
 ### Direct Tool Usage
 
@@ -113,26 +140,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     Ok(())
 }
-```
-
-## Custom Transformers
-
-You can create custom transformers by implementing the `ResponseTransformer` trait:
-
-```rust
-use std::sync::Arc;
-use gamecode_tools::transform::ResponseTransformer;
-use gamecode_tools::create_dispatcher_with_transformer;
-
-struct MyCustomTransformer;
-
-impl ResponseTransformer for MyCustomTransformer {
-    // Implement the required methods
-    // ...
-}
-
-let transformer = Arc::new(MyCustomTransformer);
-let dispatcher = create_dispatcher_with_transformer(transformer);
 ```
 
 ## License
