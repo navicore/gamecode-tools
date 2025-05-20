@@ -7,10 +7,10 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::sync::Arc;
 
-pub mod tools;
 pub mod jsonrpc;
-pub mod transform;
 pub mod logging;
+pub mod tools;
+pub mod transform;
 
 // Re-export key types
 pub use transform::{FormatConfig, FormatTransformer, InputFormat, OutputFormat};
@@ -90,11 +90,13 @@ pub fn create_bedrock_to_standard_dispatcher() -> jsonrpc::Dispatcher {
 }
 
 /// Factory function to create a dispatcher with a custom transformer
-pub fn create_dispatcher_with_transformer(transformer: transform::FormatTransformer) -> jsonrpc::Dispatcher {
+pub fn create_dispatcher_with_transformer(
+    transformer: transform::FormatTransformer,
+) -> jsonrpc::Dispatcher {
     use tools::Tool;
-    
+
     let mut dispatcher = jsonrpc::Dispatcher::with_transformer(Arc::new(transformer));
-    
+
     // Register directory_list tool
     let dir_list_tool = tools::directory_list::DirectoryList;
     dispatcher.register(
@@ -103,16 +105,14 @@ pub fn create_dispatcher_with_transformer(transformer: transform::FormatTransfor
             dir_list_tool.execute(params).await
         },
     );
-    
+
     // Register file_read tool
     let file_read_tool = tools::file_read::FileRead;
     dispatcher.register(
         "file_read",
-        move |params: tools::file_read::Params| async move {
-            file_read_tool.execute(params).await
-        },
+        move |params: tools::file_read::Params| async move { file_read_tool.execute(params).await },
     );
-    
+
     // Register file_write tool
     let file_write_tool = tools::file_write::FileWrite;
     dispatcher.register(
@@ -121,7 +121,7 @@ pub fn create_dispatcher_with_transformer(transformer: transform::FormatTransfor
             file_write_tool.execute(params).await
         },
     );
-    
+
     // Register file_patch tool
     let file_patch_tool = tools::file_patch::FilePatch;
     dispatcher.register(
@@ -130,7 +130,7 @@ pub fn create_dispatcher_with_transformer(transformer: transform::FormatTransfor
             file_patch_tool.execute(params).await
         },
     );
-    
+
     // Register directory_make tool
     let dir_make_tool = tools::directory_make::DirectoryMake;
     dispatcher.register(
@@ -139,51 +139,40 @@ pub fn create_dispatcher_with_transformer(transformer: transform::FormatTransfor
             dir_make_tool.execute(params).await
         },
     );
-    
+
     // Register file_move tool
     let file_move_tool = tools::file_move::FileMove;
     dispatcher.register(
         "file_move",
-        move |params: tools::file_move::Params| async move {
-            file_move_tool.execute(params).await
-        },
+        move |params: tools::file_move::Params| async move { file_move_tool.execute(params).await },
     );
-    
+
     // Register file_find tool
     let file_find_tool = tools::file_find::FileFind;
     dispatcher.register(
         "file_find",
-        move |params: tools::file_find::Params| async move {
-            file_find_tool.execute(params).await
-        },
+        move |params: tools::file_find::Params| async move { file_find_tool.execute(params).await },
     );
-    
+
     // Register file_grep tool
     let file_grep_tool = tools::file_grep::FileGrep;
     dispatcher.register(
         "file_grep",
-        move |params: tools::file_grep::Params| async move {
-            file_grep_tool.execute(params).await
-        },
+        move |params: tools::file_grep::Params| async move { file_grep_tool.execute(params).await },
     );
-    
+
     // Register file_diff tool
     let file_diff_tool = tools::file_diff::FileDiff;
     dispatcher.register(
         "file_diff",
-        move |params: tools::file_diff::Params| async move {
-            file_diff_tool.execute(params).await
-        },
+        move |params: tools::file_diff::Params| async move { file_diff_tool.execute(params).await },
     );
-    
+
     // Register shell tool
     let shell_tool = tools::shell::Shell;
-    dispatcher.register(
-        "shell",
-        move |params: tools::shell::Params| async move {
-            shell_tool.execute(params).await
-        },
-    );
-    
+    dispatcher.register("shell", move |params: tools::shell::Params| async move {
+        shell_tool.execute(params).await
+    });
+
     dispatcher
 }

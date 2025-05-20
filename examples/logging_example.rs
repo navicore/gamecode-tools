@@ -1,4 +1,3 @@
-use gamecode_tools::logging;
 use log::{debug, error, info, trace, warn, LevelFilter};
 
 fn main() {

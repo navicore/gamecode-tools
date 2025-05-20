@@ -11,4 +11,4 @@ pub fn init(_level: log::LevelFilter) {
 }
 
 // Re-export the log crate and its macros
-pub use log::{debug, error, info, trace, warn, LevelFilter};
+pub use log::{LevelFilter, debug, error, info, trace, warn};
