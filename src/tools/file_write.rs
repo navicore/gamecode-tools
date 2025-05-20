@@ -77,16 +77,14 @@ impl Tool for FileWrite {
 
         // Handle parent directories
         if let Some(parent) = path.parent() {
-            if !parent.as_os_str().is_empty() {
-                if !parent.exists() {
-                    if params.create_dirs {
-                        fs::create_dir_all(parent).await?;
-                    } else {
-                        return Err(Error::InvalidParam(format!(
-                            "Parent directory does not exist: {}",
-                            parent.display()
-                        )));
-                    }
+            if !parent.as_os_str().is_empty() && !parent.exists() {
+                if params.create_dirs {
+                    fs::create_dir_all(parent).await?;
+                } else {
+                    return Err(Error::InvalidParam(format!(
+                        "Parent directory does not exist: {}",
+                        parent.display()
+                    )));
                 }
             }
         }

@@ -440,17 +440,25 @@ mod tests {
     use std::sync::Mutex;
     use tokio::fs::File;
     use tokio::io::AsyncWriteExt;
-    
+
     // Global mutex to ensure only one test uses the temp directory at a time
     // This prevents race conditions during test execution
     static TEMP_DIR_MUTEX: Mutex<()> = Mutex::new(());
 
-    /// Helper function to get a temporary test directory
+    /// Helper function to get a temporary test directory with guaranteed uniqueness
     fn get_test_dir() -> PathBuf {
         let tmp_dir = std::env::temp_dir();
+
+        // Use combination of timestamp and multiple random numbers for uniqueness
+        use rand::random;
+
+        let timestamp = chrono::Utc::now().timestamp_millis();
+        let random_part1 = random::<u32>();
+        let random_part2 = random::<u16>();
+
         tmp_dir.join(format!(
-            "grep_test_{}",
-            chrono::Utc::now().timestamp_millis()
+            "grep_test_{}_{:08x}_{:04x}",
+            timestamp, random_part1, random_part2
         ))
     }
 
@@ -583,40 +591,59 @@ mod tests {
 
     #[tokio::test]
     async fn test_grep_regex() -> Result<()> {
-        // Acquire the mutex to ensure this test has exclusive access to the temp directory
-        let _lock = TEMP_DIR_MUTEX.lock().expect("Failed to acquire mutex for test");
-        
         // Create a custom test directory with specific content for this test
         let test_dir = get_test_dir();
         debug!("Using test directory: {}", test_dir.display());
 
-        // Make sure we start with a clean directory
-        if test_dir.exists() {
-            std::fs::remove_dir_all(&test_dir).map_err(|e| {
-                Error::Other(format!("Failed to remove existing test directory: {}", e))
-            })?;
-        }
+        // Use a block to ensure the mutex is dropped before any await points
+        {
+            // Acquire the mutex only for the synchronous filesystem operations
+            let _lock = TEMP_DIR_MUTEX
+                .lock()
+                .expect("Failed to acquire mutex for test");
 
+            // Make sure we start with a clean directory - use synchronous version
+            if test_dir.exists() {
+                std::fs::remove_dir_all(&test_dir).map_err(|e| {
+                    Error::Other(format!("Failed to remove existing test directory: {}", e))
+                })?;
+            }
+        } // MutexGuard is dropped here
+
+        // Now perform the async operations after releasing the mutex
         // Create directories - explicitly check the result
-        fs::create_dir_all(&test_dir).await.map_err(|e| {
-            Error::Other(format!("Failed to create test directory: {}", e))
-        })?;
+        fs::create_dir_all(&test_dir)
+            .await
+            .map_err(|e| Error::Other(format!("Failed to create test directory: {}", e)))?;
 
         // Create a file with specific content for regex testing - ensure it has "find" for our test
         let test_file_path = test_dir.join("regex_test_file.txt");
         let test_content = "This file contains the word find that will match our regex.";
 
-        create_test_file(&test_file_path, test_content).await.map_err(|e| {
-            Error::Other(format!("Failed to create test file: {}", e))
-        })?;
-        
-        // Give the filesystem time to sync
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        create_test_file(&test_file_path, test_content)
+            .await
+            .map_err(|e| Error::Other(format!("Failed to create test file: {}", e)))?;
 
-        // Verify the file was created successfully
-        assert!(test_file_path.exists(), "Test file was not created");
+        // Give the filesystem time to sync - longer delay
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
-        let content = fs::read_to_string(&test_file_path).await?;
+        // Verify the file was created successfully using async tokio fs
+        match fs::metadata(&test_file_path).await {
+            Ok(_) => debug!(
+                "Test file successfully created at {}",
+                test_file_path.display()
+            ),
+            Err(e) => {
+                return Err(Error::Other(format!(
+                    "Test file was not created or accessible: {}",
+                    e
+                )));
+            }
+        }
+
+        let content = fs::read_to_string(&test_file_path)
+            .await
+            .map_err(|e| Error::Other(format!("Failed to read test file: {}", e)))?;
         assert!(!content.is_empty(), "Test file is empty");
         debug!("Test file content: {}", content);
 
@@ -699,14 +726,28 @@ mod tests {
     async fn test_grep_with_include() -> Result<()> {
         // Create a custom test directory with specific content for this test
         let test_dir = get_test_dir();
+        debug!("Using test directory: {}", test_dir.display());
 
-        // Clean up any existing test directory
-        if test_dir.exists() {
-            let _ = std::fs::remove_dir_all(&test_dir);
-        }
+        // Use a block to ensure the mutex is dropped before any await points
+        {
+            // Acquire the mutex only for the synchronous filesystem operations
+            let _lock = TEMP_DIR_MUTEX
+                .lock()
+                .expect("Failed to acquire mutex for test");
 
+            // Clean up any existing test directory - use synchronous version
+            if test_dir.exists() {
+                std::fs::remove_dir_all(&test_dir).map_err(|e| {
+                    Error::Other(format!("Failed to remove existing test directory: {}", e))
+                })?;
+            }
+        } // MutexGuard is dropped here
+
+        // Now perform the async operations after releasing the mutex
         // Create directories
-        fs::create_dir_all(&test_dir).await?;
+        fs::create_dir_all(&test_dir)
+            .await
+            .map_err(|e| Error::Other(format!("Failed to create test directory: {}", e)))?;
 
         // Create files with different extensions - 2 txt files with "find" and 1 log file with "find"
         let txt_files_with_find = [
@@ -716,22 +757,49 @@ mod tests {
 
         let log_file_with_find = ("file3.log", "This log file also has find.");
 
-        // Create all the files
+        // Create all the files with proper error handling
         for (name, content) in &txt_files_with_find {
-            create_test_file(&test_dir.join(name), content).await?;
+            create_test_file(&test_dir.join(name), content)
+                .await
+                .map_err(|e| Error::Other(format!("Failed to create test file {}: {}", name, e)))?;
         }
-        create_test_file(&test_dir.join(log_file_with_find.0), log_file_with_find.1).await?;
 
-        // Verify files exist
+        create_test_file(&test_dir.join(log_file_with_find.0), log_file_with_find.1)
+            .await
+            .map_err(|e| {
+                Error::Other(format!(
+                    "Failed to create log file {}: {}",
+                    log_file_with_find.0, e
+                ))
+            })?;
+
+        // Give the filesystem time to sync - longer delay
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // Verify files exist using async tokio fs operations
         for (name, _) in &txt_files_with_find {
             let path = test_dir.join(name);
-            assert!(path.exists(), "Test file {} wasn't created", name);
+            match fs::metadata(&path).await {
+                Ok(_) => debug!("Test file successfully created at {}", path.display()),
+                Err(e) => {
+                    return Err(Error::Other(format!(
+                        "Test file {} was not created or accessible: {}",
+                        name, e
+                    )));
+                }
+            }
         }
-        assert!(
-            test_dir.join(log_file_with_find.0).exists(),
-            "Log file {} wasn't created",
-            log_file_with_find.0
-        );
+
+        let log_path = test_dir.join(log_file_with_find.0);
+        match fs::metadata(&log_path).await {
+            Ok(_) => debug!("Log file successfully created at {}", log_path.display()),
+            Err(e) => {
+                return Err(Error::Other(format!(
+                    "Log file {} was not created or accessible: {}",
+                    log_file_with_find.0, e
+                )));
+            }
+        };
 
         let tool = FileGrep;
 
@@ -881,24 +949,30 @@ mod tests {
 
     #[tokio::test]
     async fn test_grep_files_only() -> Result<()> {
-        // Acquire the mutex to ensure this test has exclusive access to the temp directory
-        let _lock = TEMP_DIR_MUTEX.lock().expect("Failed to acquire mutex for test");
-        
         // Create a custom test directory with specific content for this test
         let test_dir = get_test_dir();
         debug!("Using test directory: {}", test_dir.display());
 
-        // Make sure we start with a clean directory
-        if test_dir.exists() {
-            std::fs::remove_dir_all(&test_dir).map_err(|e| {
-                Error::Other(format!("Failed to remove existing test directory: {}", e))
-            })?;
-        }
+        // Use a block to ensure the mutex is dropped before any await points
+        {
+            // Acquire the mutex only for the synchronous filesystem operations
+            let _lock = TEMP_DIR_MUTEX
+                .lock()
+                .expect("Failed to acquire mutex for test");
 
+            // Make sure we start with a clean directory - use synchronous version
+            if test_dir.exists() {
+                std::fs::remove_dir_all(&test_dir).map_err(|e| {
+                    Error::Other(format!("Failed to remove existing test directory: {}", e))
+                })?;
+            }
+        } // MutexGuard is dropped here
+
+        // Now perform the async operations after releasing the mutex
         // Create directories - explicitly check the result
-        fs::create_dir_all(&test_dir).await.map_err(|e| {
-            Error::Other(format!("Failed to create test directory: {}", e))
-        })?;
+        fs::create_dir_all(&test_dir)
+            .await
+            .map_err(|e| Error::Other(format!("Failed to create test directory: {}", e)))?;
 
         // Create exactly 3 files with "find" and 1 without
         let files_with_find = [
@@ -911,22 +985,35 @@ mod tests {
 
         // Create all the files with error handling
         for (name, content) in &files_with_find {
-            create_test_file(&test_dir.join(name), content).await.map_err(|e| {
-                Error::Other(format!("Failed to create test file {}: {}", name, e))
-            })?;
+            create_test_file(&test_dir.join(name), content)
+                .await
+                .map_err(|e| Error::Other(format!("Failed to create test file {}: {}", name, e)))?;
         }
-        
-        create_test_file(&test_dir.join(file_without_find.0), file_without_find.1).await.map_err(|e| {
-            Error::Other(format!("Failed to create test file {}: {}", file_without_find.0, e))
-        })?;
-        
-        // Give the filesystem time to sync
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-        // Verify files exist
+        create_test_file(&test_dir.join(file_without_find.0), file_without_find.1)
+            .await
+            .map_err(|e| {
+                Error::Other(format!(
+                    "Failed to create test file {}: {}",
+                    file_without_find.0, e
+                ))
+            })?;
+
+        // Give the filesystem time to sync - longer delay
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // Verify files exist using async tokio fs operations
         for (name, _) in &files_with_find {
             let path = test_dir.join(name);
-            assert!(path.exists(), "Test file {} wasn't created", name);
+            match fs::metadata(&path).await {
+                Ok(_) => debug!("Test file successfully created at {}", path.display()),
+                Err(e) => {
+                    return Err(Error::Other(format!(
+                        "Test file {} was not created or accessible: {}",
+                        name, e
+                    )));
+                }
+            }
         }
 
         let tool = FileGrep;

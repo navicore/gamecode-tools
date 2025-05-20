@@ -4,6 +4,7 @@
 //! to and from different API-specific formats.
 
 use serde::{Serialize, de::DeserializeOwned};
+use serde_json::Value;
 
 use crate::Result;
 
@@ -92,6 +93,66 @@ pub struct FormatTransformer {
     config: FormatConfig,
 }
 
+/// Transform a JSON value to Bedrock format
+fn to_bedrock_format(value: &Value) -> Value {
+    match value {
+        // For objects, recursively transform all values
+        Value::Object(map) => {
+            let mut new_map = serde_json::Map::new();
+            for (k, v) in map {
+                new_map.insert(k.clone(), to_bedrock_format(v));
+            }
+            Value::Object(new_map)
+        }
+        // For arrays, recursively transform all elements
+        Value::Array(arr) => {
+            let new_arr = arr.iter().map(to_bedrock_format).collect();
+            Value::Array(new_arr)
+        }
+        // For leaf values (string, number, bool, null), wrap in the Bedrock format
+        _ => {
+            // Don't wrap if already wrapped
+            if let Value::Object(map) = value {
+                if map.contains_key("type") && map.contains_key("text") {
+                    return value.clone();
+                }
+            }
+
+            serde_json::json!({
+                "type": "text",
+                "text": value
+            })
+        }
+    }
+}
+
+fn from_bedrock_format(value: &Value) -> Value {
+    match value {
+        // Check if this is a wrapped value
+        Value::Object(map) => {
+            if let (Some(Value::String(typ)), Some(content)) = (map.get("type"), map.get("text")) {
+                if typ == "text" {
+                    return from_bedrock_format(content);
+                }
+            }
+
+            // Regular object, process recursively
+            let mut new_map = serde_json::Map::new();
+            for (k, v) in map {
+                new_map.insert(k.clone(), from_bedrock_format(v));
+            }
+            Value::Object(new_map)
+        }
+        // For arrays, recursively unwrap all elements
+        Value::Array(arr) => {
+            let new_arr = arr.iter().map(from_bedrock_format).collect();
+            Value::Array(new_arr)
+        }
+        // For other values, return as is
+        _ => value.clone(),
+    }
+}
+
 impl FormatTransformer {
     /// Create a new format transformer with the given configuration
     pub fn new(config: FormatConfig) -> Self {
@@ -113,82 +174,20 @@ impl FormatTransformer {
         self.config
     }
 
-    /// Transform a JSON value to Bedrock format
-    fn to_bedrock_format(&self, value: &serde_json::Value) -> serde_json::Value {
-        match value {
-            // For objects, recursively transform all values
-            serde_json::Value::Object(map) => {
-                let mut new_map = serde_json::Map::new();
-                for (k, v) in map {
-                    new_map.insert(k.clone(), self.to_bedrock_format(v));
-                }
-                serde_json::Value::Object(new_map)
-            }
-            // For arrays, recursively transform all elements
-            serde_json::Value::Array(arr) => {
-                let new_arr = arr.iter().map(|v| self.to_bedrock_format(v)).collect();
-                serde_json::Value::Array(new_arr)
-            }
-            // For leaf values (string, number, bool, null), wrap in the Bedrock format
-            _ => {
-                // Don't wrap if already wrapped
-                if let serde_json::Value::Object(map) = value {
-                    if map.contains_key("type") && map.contains_key("text") {
-                        return value.clone();
-                    }
-                }
-
-                serde_json::json!({
-                    "type": "text",
-                    "text": value
-                })
-            }
-        }
-    }
-
     /// Extract a value from Bedrock format
-    fn from_bedrock_format(&self, value: &serde_json::Value) -> serde_json::Value {
-        match value {
-            // Check if this is a wrapped value
-            serde_json::Value::Object(map) => {
-                if let (Some(serde_json::Value::String(typ)), Some(content)) =
-                    (map.get("type"), map.get("text"))
-                {
-                    if typ == "text" {
-                        return self.from_bedrock_format(content);
-                    }
-                }
-
-                // Regular object, process recursively
-                let mut new_map = serde_json::Map::new();
-                for (k, v) in map {
-                    new_map.insert(k.clone(), self.from_bedrock_format(v));
-                }
-                serde_json::Value::Object(new_map)
-            }
-            // For arrays, recursively unwrap all elements
-            serde_json::Value::Array(arr) => {
-                let new_arr = arr.iter().map(|v| self.from_bedrock_format(v)).collect();
-                serde_json::Value::Array(new_arr)
-            }
-            // For other values, return as is
-            _ => value.clone(),
-        }
-    }
-
     /// Transform parameters based on the input format
-    pub fn transform_params(&self, params: serde_json::Value) -> Result<serde_json::Value> {
+    pub fn transform_params(&self, params: Value) -> Result<Value> {
         match self.config.input_format {
             InputFormat::Standard => Ok(params),
-            InputFormat::Bedrock => Ok(self.from_bedrock_format(&params)),
+            InputFormat::Bedrock => Ok(from_bedrock_format(&params)),
         }
     }
 
     /// Transform result based on the output format
-    pub fn transform_result(&self, result: serde_json::Value) -> Result<serde_json::Value> {
+    pub fn transform_result(&self, result: Value) -> Result<Value> {
         match self.config.output_format {
             OutputFormat::Standard => Ok(result),
-            OutputFormat::Bedrock => Ok(self.to_bedrock_format(&result)),
+            OutputFormat::Bedrock => Ok(to_bedrock_format(&result)),
         }
     }
 }
@@ -200,11 +199,11 @@ impl Default for FormatTransformer {
 }
 
 /// Helper functions to serialize/deserialize with type checking
-pub fn serialize<T: Serialize>(value: T) -> Result<serde_json::Value> {
+pub fn serialize<T: Serialize>(value: T) -> Result<Value> {
     Ok(serde_json::to_value(value)?)
 }
 
-pub fn deserialize<T: DeserializeOwned>(value: serde_json::Value) -> Result<T> {
+pub fn deserialize<T: DeserializeOwned>(value: Value) -> Result<T> {
     Ok(serde_json::from_value(value)?)
 }
 
