@@ -22,6 +22,10 @@ pub trait Tool {
 }
 
 pub mod directory_list;
+pub mod directory_make;
 pub mod file_read;
 pub mod file_write;
 pub mod file_patch;
+pub mod file_move;
+pub mod file_find;
+pub mod file_grep;

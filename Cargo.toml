@@ -18,6 +18,9 @@ log = "0.4"
 chrono = "0.4"
 base64 = "0.21"
 diff = "0.1.13"
+regex = "1.11.1"
+glob = "0.3.2"
+walkdir = "2.4.0"
 
 [dev-dependencies]
 tokio-test = "0.4"
