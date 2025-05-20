@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use base64::{Engine as _, engine::general_purpose};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::fs;
 
 use super::Tool;
@@ -75,7 +75,7 @@ pub struct Output {
 }
 
 /// Guess the MIME type from a file extension
-fn guess_mime_type(path: &PathBuf) -> String {
+fn guess_mime_type(path: &Path) -> String {
     let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     match extension.to_lowercase().as_str() {
@@ -163,7 +163,7 @@ impl Tool for FileRead {
         match effective_content_type {
             ContentType::Text => {
                 // Read the file as text
-                let content = fs::read_to_string(&path).await.map_err(|e| Error::Io(e))?;
+                let content = fs::read_to_string(&path).await.map_err(Error::Io)?;
 
                 // Process line numbers if requested
                 let lines: Vec<&str> = content.lines().collect();

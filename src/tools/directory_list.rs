@@ -131,11 +131,7 @@ impl Tool for DirectoryList {
                             let secs = duration.as_secs() as i64;
                             let nsecs = duration.subsec_nanos();
 
-                            if let Some(dt) = DateTime::<Utc>::from_timestamp(secs, nsecs) {
-                                Some(dt.to_rfc3339())
-                            } else {
-                                None
-                            }
+                            DateTime::<Utc>::from_timestamp(secs, nsecs).map(|dt| dt.to_rfc3339())
                         }
                         Err(_) => None,
                     }
