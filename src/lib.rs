@@ -121,5 +121,14 @@ pub fn create_dispatcher_with_transformer(transformer: transform::FormatTransfor
         },
     );
     
+    // Register file_patch tool
+    let file_patch_tool = tools::file_patch::FilePatch;
+    dispatcher.register(
+        "file_patch",
+        move |params: tools::file_patch::Params| async move {
+            file_patch_tool.execute(params).await
+        },
+    );
+    
     dispatcher
 }

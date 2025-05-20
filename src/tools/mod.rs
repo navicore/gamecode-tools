@@ -24,3 +24,4 @@ pub trait Tool {
 pub mod directory_list;
 pub mod file_read;
 pub mod file_write;
+pub mod file_patch;

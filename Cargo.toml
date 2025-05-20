@@ -17,6 +17,7 @@ async-trait = "0.1"
 log = "0.4"
 chrono = "0.4"
 base64 = "0.21"
+diff = "0.1.13"
 
 [dev-dependencies]
 tokio-test = "0.4"
