@@ -21,10 +21,11 @@ The library is designed around these key components:
    - Handles errors according to JSONRPC spec
    - Returns JSONRPC-formatted responses
 
-3. **Response Transformers**: Format adapters for different API conventions:
-   - `StandardTransformer`: Standard JSONRPC format
-   - `BedrockTransformer`: AWS Bedrock format with `{"type": "text", "text": content}` wrappers
-   - Custom transformers can be implemented by users
+3. **Format Transformers**: Format adapters for different API conventions:
+   - `FormatTransformer`: Configurable transformer for different input/output formats
+   - Supports standard JSONRPC format and AWS Bedrock format
+   - Allows independent control of input and output formats
+   - Handles recursive transformation of nested JSON structures
 
 4. **Error Handling**: Uses standard Rust `Result<T, Error>` with custom `Error` enum:
    - No dependencies on `anyhow` or `thiserror`
@@ -42,6 +43,29 @@ Planned tools:
 - `grep`: Search file contents
 - `find`: Find files matching criteria
 - `mkdir`: Create directories
+
+## Format Options
+
+The library supports these format transformers:
+
+1. **Standard**: Regular JSONRPC with direct scalar values
+2. **Bedrock**: AWS Bedrock format with `{"type": "text", "text": value}` wrappers for all scalar values
+3. **Mixed formats**: Allows independent control of input and output formats
+
+Format options can be specified in several ways:
+
+1. Using factory functions:
+   - `create_default_dispatcher()`: Standard format for both input and output
+   - `create_bedrock_dispatcher()`: Bedrock format for both input and output
+   - `create_standard_to_bedrock_dispatcher()`: Standard input, Bedrock output
+   - `create_bedrock_to_standard_dispatcher()`: Bedrock input, Standard output
+
+2. Using custom configuration:
+   ```rust
+   let config = FormatConfig::new(InputFormat::Standard, OutputFormat::Bedrock);
+   let transformer = FormatTransformer::new(config);
+   let dispatcher = create_dispatcher_with_transformer(transformer);
+   ```
 
 ## Development Commands
 
@@ -72,7 +96,7 @@ cargo doc --open
 
 # Run examples
 cargo run --example directory_list
-cargo run --example bedrock_transform
+cargo run --example format_options
 
 # Publish to crates.io (when ready)
 cargo publish
@@ -94,3 +118,8 @@ When adding new tools:
 3. Register the tool in `create_default_dispatcher()` in lib.rs
 4. Add tests for the tool implementation
 5. Add an example showing how to use the tool
+
+When working with different formats:
+1. Remember that format transformers handle both input and output formats
+2. The Bedrock transformer recursively wraps all leaf values
+3. Format detection is explicit, not automatic
