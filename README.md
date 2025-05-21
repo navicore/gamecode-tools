@@ -8,8 +8,9 @@ A Rust library providing JSONRPC-compatible tool functions for MCP (Model Contex
 - Type-safe API using Rust's strong type system
 - Tools for filesystem operations and search
 - Flexible format transformers for different API conventions (standard JSONRPC, AWS Bedrock, etc.)
-- macOS command line support
+- Designed for macOS and Linux environments
 - Proper logging with configurable log levels
+- Thread-safe with proper mutex handling in async code
 
 ## Currently Implemented Tools
 
