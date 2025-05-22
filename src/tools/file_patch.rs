@@ -1,9 +1,9 @@
 //! File patch tool implementation
 
 use async_trait::async_trait;
-use base64::{Engine as _, engine::general_purpose};
-use serde::{Deserialize, Serialize};
+use base64::{engine::general_purpose, Engine as _};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
 
@@ -201,7 +201,7 @@ fn apply_hunk(
         }
 
         // Add any new lines that should come before this position
-        while let Some((add_idx, ref text)) = sorted_adds.first() {
+        while let Some((add_idx, text)) = sorted_adds.first() {
             if *add_idx <= idx {
                 new_patched_lines.push(text.clone());
                 sorted_adds.remove(0);

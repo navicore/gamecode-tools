@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use glob::Pattern;
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio::task;
@@ -502,7 +502,9 @@ mod tests {
     async fn test_find_by_name() -> Result<()> {
         // Create a unique directory for this test
         let _timestamp = chrono::Utc::now().timestamp_millis();
-        std::env::set_var("FF_TEST_NAME", "find_by_name");
+        unsafe {
+            std::env::set_var("FF_TEST_NAME", "find_by_name");
+        }
 
         let test_dir = setup_test_directory().await?;
         let tool = FileFind;
@@ -535,8 +537,9 @@ mod tests {
     async fn test_find_by_pattern() -> Result<()> {
         // Create a unique directory for this test
         let _timestamp = chrono::Utc::now().timestamp_millis();
-        std::env::set_var("FF_TEST_NAME", "find_by_pattern");
-
+        unsafe {
+            std::env::set_var("FF_TEST_NAME", "find_by_pattern");
+        }
         let test_dir = setup_test_directory().await?;
         let tool = FileFind;
 
@@ -666,7 +669,9 @@ mod tests {
     async fn test_find_with_ignore() -> Result<()> {
         // Create a unique directory for this test
         let _timestamp = chrono::Utc::now().timestamp_millis();
-        std::env::set_var("FF_TEST_NAME", "find_with_ignore");
+        unsafe {
+            std::env::set_var("FF_TEST_NAME", "find_with_ignore");
+        }
 
         let test_dir = setup_test_directory().await?;
         let tool = FileFind;

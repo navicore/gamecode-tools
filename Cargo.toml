@@ -1,9 +1,10 @@
 [package]
 name = "gamecode-tools"
 version = "0.1.0"
-edition = "2021"
-description = "JSONRPC-compatible tool functions for MCP applications"
+edition = "2024"
 license = "MIT"
+authors = ["Ed Sweeney <ed@onextent.com>"]
+description = "JSONRPC-compatible tool functions for MCP applications"
 repository = "https://github.com/navicore/gamecode-tools"
 readme = "README.md"
 keywords = ["jsonrpc", "mcp", "tools"]
