@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::path::PathBuf;
 use tokio::fs;
 
@@ -13,7 +14,7 @@ use crate::{Error, Result};
 pub struct FileMove;
 
 /// Parameters for the file move tool
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct Params {
     /// Source path
     pub source: String,

@@ -3,6 +3,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::path::PathBuf;
 use tokio::fs;
 
@@ -14,7 +15,7 @@ use crate::{Error, Result};
 pub struct DirectoryList;
 
 /// Parameters for the directory list tool
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct Params {
     /// Path to the directory to list
     pub path: String,

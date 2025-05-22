@@ -3,6 +3,7 @@
 use async_trait::async_trait;
 use base64::{Engine as _, engine::general_purpose};
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::path::PathBuf;
 use tokio::fs;
 
@@ -10,7 +11,7 @@ use super::Tool;
 use crate::{Error, Result};
 
 /// Content type for file writing
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ContentType {
     /// Content is provided as text (UTF-8)
@@ -30,7 +31,7 @@ impl Default for ContentType {
 pub struct FileWrite;
 
 /// Parameters for the file write tool
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct Params {
     /// Path of the file to write
     pub path: String,
