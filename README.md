@@ -1,3 +1,6 @@
+[![Dependabot Updates](https://github.com/navicore/gamecode-tools/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/navicore/gamecode-tools/actions/workflows/dependabot/dependabot-updates)
+[![Rust CI](https://github.com/navicore/gamecode-tools/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/navicore/gamecode-tools/actions/workflows/rust-ci.yml)
+
 # gamecode-tools
 
 A Rust library providing JSONRPC-compatible tool functions for MCP (Model Context Protocol) applications.
