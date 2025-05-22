@@ -3,6 +3,7 @@
 use async_trait::async_trait;
 use base64::{Engine as _, engine::general_purpose};
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::path::PathBuf;
 use tokio::fs;
 
@@ -10,7 +11,7 @@ use super::Tool;
 use crate::{Error, Result};
 
 /// Patch type for the file patch tool
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum PatchType {
     /// Unified diff format
@@ -30,7 +31,7 @@ impl Default for PatchType {
 pub struct FilePatch;
 
 /// Parameters for the file patch tool
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct Params {
     /// Path of the file to patch
     pub path: String,

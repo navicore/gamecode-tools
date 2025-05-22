@@ -6,6 +6,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -20,7 +21,7 @@ use crate::{Error, Result};
 pub struct Shell;
 
 /// Parameters for the shell tool
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct Params {
     /// The command to execute (without arguments)
     pub command: String,

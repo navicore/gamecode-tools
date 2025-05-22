@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use glob::Pattern;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio::task;
@@ -17,7 +18,7 @@ use crate::{Error, Result};
 pub struct FileGrep;
 
 /// Parameters for the file grep tool
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct Params {
     /// Directory to search in
     pub directory: String,

@@ -109,33 +109,17 @@ fn to_bedrock_format(value: &Value) -> Value {
             let new_arr = arr.iter().map(to_bedrock_format).collect();
             Value::Array(new_arr)
         }
-        // For leaf values (string, number, bool, null), wrap in the Bedrock format
-        _ => {
-            // Don't wrap if already wrapped
-            if let Value::Object(map) = value {
-                if map.contains_key("type") && map.contains_key("text") {
-                    return value.clone();
-                }
-            }
-
-            serde_json::json!({
-                "type": "text",
-                "text": value
-            })
-        }
+        // For leaf values (string, number, bool, null), directly return without wrapping
+        // This is a key change from the original format which wrapped values in {"type": "text", "text": value}
+        _ => value.clone()
     }
 }
 
 fn from_bedrock_format(value: &Value) -> Value {
     match value {
-        // Check if this is a wrapped value
+        // For objects, recursively transform without special handling for type/text wrappers
         Value::Object(map) => {
-            if let (Some(Value::String(typ)), Some(content)) = (map.get("type"), map.get("text")) {
-                if typ == "text" {
-                    return from_bedrock_format(content);
-                }
-            }
-
+            // No longer need special handling for {"type": "text", "text": value} format
             // Regular object, process recursively
             let mut new_map = serde_json::Map::new();
             for (k, v) in map {

@@ -3,6 +3,7 @@
 use async_trait::async_trait;
 use glob::Pattern;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio::task;
@@ -12,7 +13,7 @@ use super::Tool;
 use crate::{Error, Result};
 
 /// File type for filtering search results
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum FileType {
     /// Only find files
@@ -30,7 +31,7 @@ impl Default for FileType {
 }
 
 /// Find mode for determining how to match paths
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum FindMode {
     /// Match exact filename or directory
@@ -52,7 +53,7 @@ impl Default for FindMode {
 pub struct FileFind;
 
 /// Parameters for the file find tool
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct Params {
     /// Directory to search in
     pub directory: String,

@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use similar::{ChangeTag, TextDiff};
 use std::path::{Path, PathBuf};
 use tokio::fs;
@@ -14,7 +15,7 @@ use crate::{Error, Result};
 pub struct FileDiff;
 
 /// Type of diff
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DiffType {
     /// Unified diff format (most common)
@@ -36,7 +37,7 @@ impl Default for DiffType {
 }
 
 /// Parameters for the file diff tool
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct Params {
     /// Path to the first file
     pub file1: String,
