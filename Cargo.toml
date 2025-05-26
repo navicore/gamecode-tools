@@ -18,7 +18,7 @@ schemars = { version = "0.8", features = ["derive"] }
 async-trait = "0.1"
 log = "0.4"
 chrono = "0.4"
-base64 = "0.21"
+base64 = "0.22"
 diff = "0.1.13"
 similar = "2.2.1"
 regex = "1.11.1"
