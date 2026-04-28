@@ -1,3 +1,8 @@
+<!-- ghmig:moved -->
+> **This repository has moved to [https://git.navicore.tech/navicore/gamecode-tools](https://git.navicore.tech/navicore/gamecode-tools).**
+>
+> The GitHub copy is archived and no longer maintained.
+
 [![Dependabot Updates](https://github.com/navicore/gamecode-tools/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/navicore/gamecode-tools/actions/workflows/dependabot/dependabot-updates)
 [![Rust CI](https://github.com/navicore/gamecode-tools/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/navicore/gamecode-tools/actions/workflows/rust-ci.yml)
 
